@@ -1,7 +1,9 @@
 import os
+from dotenv import load_dotenv
+load_dotenv()
 import json
 from datetime import datetime, timedelta
-from fastapi import FastAPI, Request
+from fastapi import FastAPI, Request, Body
 from fastapi.responses import JSONResponse, HTMLResponse
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
@@ -12,6 +14,9 @@ from langchain_core.prompts import ChatPromptTemplate, MessagesPlaceholder
 from langgraph.checkpoint.memory import MemorySaver
 from langgraph.graph import START, MessagesState, StateGraph
 from langchain_core.runnables.config import RunnableConfig
+from email_utils import send_booking_email
+import smtplib
+from email.message import EmailMessage
 
 # Set up Google API key
 os.environ["GOOGLE_API_KEY"] = "AIzaSyBZePYnjTS09MfphUBMo2dpotBlrxm889s"
@@ -35,20 +40,19 @@ When users ask for healthcare services (e.g., "allergy test service providers in
 ✅ Include:
 
 📍 Name of provider
-
 🗺️ Location
-
 📞 Phone number
-
 📧 Email
-
 🔗 Website
+
+For each provider, include a clickable button labeled 'Book Appointment' using this HTML:
+<button class=\"book-btn\" data-provider=\"PROVIDER_NAME\" data-email=\"PROVIDER_EMAIL\">Book Appointment</button>
+right after their details. Replace PROVIDER_NAME and PROVIDER_EMAIL with the actual values.
 
 🎯 Keep replies concise and focused. If the list is long, show 3–5 top results and offer to show more if needed.
 
 You should also handle bookings if the user asks. Always end your replies with a friendly question like:
 "Would you like to book an appointment or see more options?" 😊
-        
         """,
     ),
     MessagesPlaceholder(variable_name="messages"),
@@ -246,5 +250,51 @@ async def api_chat(request: Request):
         "health_profile": profile,
         "session_id": session_id
     })
+
+@app.post("/api/book")
+async def book_appointment(request: Request, data: dict = Body(...)):
+    user_booking = data.get("booking")
+    if not user_booking:
+        return JSONResponse({"error": "Missing booking data."}, status_code=400)
+    required_fields = ["name", "email", "phone", "date", "time", "notes"]
+    for field in required_fields:
+        if field not in user_booking or not user_booking[field]:
+            return JSONResponse({"error": f"Missing field: {field}"}, status_code=400)
+
+    # Use provider_email from request if present, else use user's email
+    provider_email = data.get("provider_email") or user_booking.get("email")
+    user_email = user_booking.get("email")
+    email_sender = os.environ.get("EMAIL_SENDER")
+    email_password = os.environ.get("EMAIL_PASSWORD")
+    if not email_sender or not email_password:
+        return JSONResponse({"error": "Email sender credentials not set in environment variables."}, status_code=500)
+
+    # Send email to provider (now user's email)
+    provider_result = send_booking_email(user_booking, provider_email)
+
+    # Send confirmation to user
+    confirmation_msg = EmailMessage()
+    confirmation_msg['Subject'] = f"✅ Appointment Confirmed with Provider"
+    confirmation_msg['From'] = email_sender
+    confirmation_msg['To'] = user_email
+    confirmation_msg.set_content(f"""
+Dear {user_booking['name']},
+
+Your appointment request has been sent to the provider. You will be contacted soon for confirmation.
+
+Details:
+📅 Date: {user_booking['date']}
+⏰ Time: {user_booking['time']}
+
+Thank you for using our service!
+""")
+    try:
+        with smtplib.SMTP_SSL("smtp.gmail.com", 465) as smtp:
+            smtp.login(email_sender, email_password)
+            smtp.send_message(confirmation_msg)
+        user_result = "✅ Confirmation email sent to user."
+    except Exception as e:
+        user_result = f"❌ Failed to send confirmation to user: {e}"
+    return {"provider_result": provider_result, "user_result": user_result}
 
 # To run: uvicorn app:app --host 0.0.0.0 --port 7860 

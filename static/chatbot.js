@@ -172,6 +172,7 @@ function typewriterBotMsg(text) {
       setTimeout(type, 5 + Math.random()*24);
     } else {
       bubble.innerHTML = html;
+      attachBookAppointmentHandlers(); // Attach handlers after rendering
     }
   }
   type();
@@ -223,4 +224,65 @@ function showLoader(show = true) {
 // Override onboarding logic
 chatInput.disabled = true;
 chatInput.placeholder = 'Please answer the onboarding questions...';
-askOnboardingQuestion(); 
+askOnboardingQuestion();
+
+function attachBookAppointmentHandlers() {
+  document.querySelectorAll('.book-btn').forEach(btn => {
+    btn.onclick = function() {
+      const providerName = btn.getAttribute('data-provider');
+      const providerEmail = btn.getAttribute('data-email');
+      showBookingForm(providerName, providerEmail);
+    };
+  });
+}
+
+// Call this after every bot message is rendered:
+setTimeout(attachBookAppointmentHandlers, 100); // or after your render function
+
+function showBookingForm(providerName, providerEmail) {
+  // Remove any existing form
+  const oldForm = document.getElementById('booking-form-modal');
+  if (oldForm) oldForm.remove();
+
+  // Create form HTML
+  const formDiv = document.createElement('div');
+  formDiv.id = 'booking-form-modal';
+  formDiv.style = 'position:fixed;top:0;left:0;width:100vw;height:100vh;background:rgba(0,0,0,0.3);display:flex;align-items:center;justify-content:center;z-index:9999;';
+  formDiv.innerHTML = `
+    <form id="booking-form" style="background:#fff;padding:24px 32px;border-radius:12px;box-shadow:0 2px 16px #0002;min-width:320px;max-width:90vw;">
+      <h3>Book Appointment with ${providerName}</h3>
+      <input type="hidden" name="provider_email" value="${providerEmail}" />
+      <div style="margin-bottom:10px;"><input name="name" placeholder="Your Name" required style="width:100%;padding:8px;" /></div>
+      <div style="margin-bottom:10px;"><input name="email" placeholder="Your Email" type="email" required style="width:100%;padding:8px;" /></div>
+      <div style="margin-bottom:10px;"><input name="phone" placeholder="Your Phone" required style="width:100%;padding:8px;" /></div>
+      <div style="margin-bottom:10px;"><input name="date" type="date" required style="width:100%;padding:8px;" /></div>
+      <div style="margin-bottom:10px;"><input name="time" type="time" required style="width:100%;padding:8px;" /></div>
+      <div style="margin-bottom:10px;"><textarea name="notes" placeholder="Notes (optional)" style="width:100%;padding:8px;"></textarea></div>
+      <button type="submit" style="background:#2563eb;color:#fff;padding:8px 16px;border:none;border-radius:6px;">Book</button>
+      <button type="button" onclick="document.getElementById('booking-form-modal').remove()" style="margin-left:10px;">Cancel</button>
+    </form>
+  `;
+  document.body.appendChild(formDiv);
+
+  document.getElementById('booking-form').onsubmit = async function(e) {
+    e.preventDefault();
+    const form = e.target;
+    const booking = {
+      name: form.name.value,
+      email: form.email.value,
+      phone: form.phone.value,
+      date: form.date.value,
+      time: form.time.value,
+      notes: form.notes.value,
+    };
+    // Send to backend
+    const res = await fetch('/api/book', {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({ booking })
+    });
+    const data = await res.json();
+    alert((data.provider_result || data.error || '') + '\n' + (data.user_result || ''));
+    formDiv.remove();
+  };
+} 
