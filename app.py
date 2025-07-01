@@ -71,18 +71,18 @@ app_graph = workflow.compile(checkpointer=memory)
 
 # Health questions for initial assessment
 HEALTH_QUESTIONS = [
-    {
-        "question": "What brings you here today?",
-        "options": ["Book Appointment", "Health Question", "General Checkup", "Emergency", "Just Chatting"]
-    },
-    {
-        "question": "Please enter your full name:",
-        "options": []  # Free text input expected
-    },
-    {
-        "question": "Please enter your email address:",
-        "options": []  # Free text input expected
-    },
+    # {
+    #     "question": "What brings you here today?",
+    #     "options": ["Book Appointment", "Health Question", "General Checkup", "Emergency", "Just Chatting"]
+    # },
+    # {
+    #     "question": "Please enter your full name:",
+    #     "options": []  # Free text input expected
+    # },
+    # {
+    #     "question": "Please enter your email address:",
+    #     "options": []  # Free text input expected
+    # },
     
 ]
 

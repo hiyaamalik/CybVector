@@ -108,7 +108,9 @@ function askOnboardingQuestion() {
             const val = input.value.trim();
             if (!val) return;
             profile[q.key] = val;
-            userName = val;
+            if (q.key === 'name') {
+              userName = val;
+            }
             window.updateProfile(profile);
             renderUserMessage(val);
             onboardingStep++;
