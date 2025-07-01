@@ -23,6 +23,13 @@ const ONBOARDING_QUESTIONS = [
     placeholder: 'Enter your name...'
   },
   {
+    key: 'email',
+    icon: '✉️',
+    question: 'What is your email address?',
+    type: 'input',
+    placeholder: 'Enter your email...'
+  },
+  {
     key: 'gender',
     icon: '🚻',
     question: 'What is your gender?',

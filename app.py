@@ -76,17 +76,14 @@ HEALTH_QUESTIONS = [
         "options": ["Book Appointment", "Health Question", "General Checkup", "Emergency", "Just Chatting"]
     },
     {
-        "question": "How are you feeling today?",
-        "options": ["Great!", "Good", "Okay", "Not Well", "Need Help"]
+        "question": "Please enter your full name:",
+        "options": []  # Free text input expected
     },
     {
-        "question": "Any specific health concerns?",
-        "options": ["Fever/Cold", "Headache", "Stomach Issues", "Chest Pain", "Back Pain", "Skin Problems", "Mental Health", "No Issues"]
+        "question": "Please enter your email address:",
+        "options": []  # Free text input expected
     },
-    {
-        "question": "When did you last visit a doctor?",
-        "options": ["This Week", "This Month", "Few Months Ago", "Over a Year", "Never"]
-    }
+    
 ]
 
 APPOINTMENT_TYPES = ["Doctor Consultation", "Lab Tests", "Health Screening", "Vaccination", "Dental", "Eye Checkup"]
@@ -162,7 +159,14 @@ class HealthChatbot:
                 profile = session["user_info"]
                 response = (
                     "✅ <b>Health Profile Created!</b><br>"
-                    "<ul style='margin:8px 0 8px 0;padding-left:18px;'><li><b>Primary concern:</b> {profile.get('q0', 'Not specified')}</li><li><b>Current wellness:</b> {profile.get('q1', 'Not specified')}</li><li><b>Health focus:</b> {profile.get('q2', 'None specified')}</li><li><b>Last consultation:</b> {profile.get('q3', 'Not specified')}</li></ul><div style='color:#2563eb;margin-top:8px;'>🎉 Now you can ask health questions, book appointments, or get wellness tips!<br>What would you like to do next?</div>"
+                    "<ul style='margin:8px 0 8px 0;padding-left:18px;'>"
+                    "<li><b>Name:</b> {profile.get('q1', 'Not provided')}</li>"
+                    "<li><b>Email:</b> {profile.get('q2', 'Not provided')}</li>"
+                    "<li><b>Primary concern:</b> {profile.get('q0', 'Not specified')}</li>"
+                    "<li><b>Current wellness:</b> {profile.get('q3', 'Not specified')}</li>"
+                    "<li><b>Health focus:</b> {profile.get('q4', 'None specified')}</li>"
+                    "<li><b>Last consultation:</b> {profile.get('q5', 'Not specified')}</li>"
+                    "</ul><div style='color:#2563eb;margin-top:8px;'>🎉 Now you can ask health questions, book appointments, or get wellness tips!<br>What would you like to do next?</div>"
                 )
                 history.append([message, response])
                 return history, response, [], profile
