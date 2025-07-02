@@ -6,7 +6,7 @@ body, html {
 }
 
 body {
-  background: #f7fafd;
+  background: linear-gradient(135deg, #f7fafd 60%, #e3f2fd 100%);
   font-family: 'Inter', system-ui, sans-serif;
   position: relative;
 }
@@ -23,6 +23,9 @@ body {
   position: sticky;
   top: 0;
   z-index: 100;
+  font-size: 1.5rem;
+  font-weight: 700;
+  color: #2563eb;
 }
 
 .header-left {
@@ -90,36 +93,36 @@ body {
 
 .main-flex {
   display: flex;
-  flex-direction: column;
-  height: 100vh;
-  min-height: 0;
+  flex-direction: row;
+  height: calc(100vh - 80px);
+  align-items: flex-start;
+  gap: 32px;
+  max-width: 1400px;
   margin: 0 auto;
-  max-width: 1800px;
   padding: 32px 0 0 0;
-  position: relative;
 }
 
 .chat-section {
-  flex: 1 1 0;
-  min-height: 0;
-  max-width: 1200px;
-  min-width: 500px;
+  flex: 2 1 0;
+  min-width: 400px;
+  max-width: 900px;
+  height: 70vh;
+  margin-bottom: 0;
+  box-shadow: 0 4px 32px rgba(44, 62, 80, 0.10);
+  border: 1px solid #e3eaf2;
   background: #fff;
   border-radius: 22px;
-  box-shadow: 0 4px 32px rgba(44, 62, 80, 0.10);
   display: flex;
   flex-direction: column;
   padding: 0 0 16px 0;
   overflow: hidden;
-  align-self: flex-end;
-  margin-bottom: 50px;
-  height: 80vh;
 }
 
 .chat-area {
   flex: 1 1 0;
   min-height: 400px;
-  max-height: 70vh;
+  height: 100%;
+  max-height: 60vh;
   display: flex;
   flex-direction: column;
   gap: 18px;
@@ -354,19 +357,14 @@ body {
     padding: 0;
     height: auto;
   }
-  .profile-panel {
-    max-width: 100vw;
-    min-width: 0;
-    margin: 18px 8px 0 8px;
-    position: static;
-  }
-  .chat-section {
+  .profile-panel, .chat-section {
     width: 100vw;
     max-width: 100vw;
     min-width: 0;
     border-radius: 0;
     margin-bottom: 32px;
     align-self: stretch;
+    height: auto;
   }
 }
 
@@ -381,17 +379,14 @@ body {
     max-width: 100vw;
     padding: 0;
   }
-  .profile-panel {
-    max-width: 100vw;
-    min-width: 0;
-    margin: 18px 8px 0 8px;
-    position: static;
-  }
-  .chat-section {
+  .profile-panel, .chat-section {
     width: 100vw;
     max-width: 100vw;
     min-width: 0;
     border-radius: 0;
+    margin-bottom: 32px;
+    align-self: stretch;
+    height: auto;
   }
   .chat-area {
     padding: 0 6px 0 6px;
@@ -402,20 +397,22 @@ body {
 }
 
 .profile-panel {
-  flex: 0 0 320px;
-  max-width: 350px;
+  flex: 1 1 0;
   min-width: 320px;
+  max-width: 350px;
+  height: 70vh;
+  margin-top: 0;
+  align-self: flex-start;
   background: #f7fbff;
   border-radius: 18px;
-  box-shadow: 0 2px 16px rgba(44, 62, 80, 0.08);
+  box-shadow: 0 4px 32px rgba(44, 62, 80, 0.10);
+  border: 1px solid #e3eaf2;
   padding: 24px 18px 18px 18px;
-  margin-top: 0;
   display: flex;
   flex-direction: column;
   align-items: stretch;
   min-height: 420px;
   height: fit-content;
-  border: 1px solid #e3eaf2;
 }
 
 .profile-header {
