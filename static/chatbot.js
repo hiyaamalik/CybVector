@@ -11,7 +11,7 @@ let userName = '';
 
 const USER_NAME = 'Olivia';
 const USER_AVATAR = 'https://randomuser.me/api/portraits/women/44.jpg';
-const BOT_NAME = 'HealthAssist';
+const BOT_NAME = 'AGENT X';
 const BOT_AVATAR = `<span class="bot-avatar"><img src="https://cdn-icons-png.flaticon.com/512/3774/3774299.png" alt="Doctor" style="width:38px;height:38px;border-radius:50%;object-fit:cover;border:2px solid #e3eaf2;background:#e3f2fd;" /></span>`;
 
 const ONBOARDING_QUESTIONS = [
