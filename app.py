@@ -1,107 +1,41 @@
 import os
-from dotenv import load_dotenv
-load_dotenv()
+import re
 import json
-from datetime import datetime, timedelta
-from fastapi import FastAPI, Request, Body
+from dotenv import load_dotenv
+from fastapi import FastAPI, Request
 from fastapi.responses import JSONResponse, HTMLResponse
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
-from langchain.chat_models import init_chat_model
-from langchain_core.messages import HumanMessage, BaseMessage
-from langchain_core.prompts import ChatPromptTemplate, MessagesPlaceholder
-from langgraph.checkpoint.memory import MemorySaver
-from langgraph.graph import START, MessagesState, StateGraph
-from langchain_core.runnables.config import RunnableConfig
-from email_utils import send_booking_email
-import smtplib
-from email.message import EmailMessage
+from datetime import datetime
+from uuid import uuid4
+from typing import Optional
 
-# Set up Google API key
-os.environ["GOOGLE_API_KEY"] = "AIzaSyBZePYnjTS09MfphUBMo2dpotBlrxm889s"
+# Load environment variables from the .env file
+load_dotenv()
 
-# Initialize the model
-model = init_chat_model("gemini-2.0-flash", model_provider="google_genai")
+# Import Gemini library
+import google.generativeai as genai
 
-# Create the chat prompt template
-prompt_template = ChatPromptTemplate.from_messages([
-    (
-        "system",
-        """
-        You are a friendly and intelligent healthcare assistant designed to help users find healthcare services (like allergy tests, diagnostic labs, doctors, etc.) and assist with bookings. Speak like a helpful human assistant—professional, yet warm—with emojis where suitable 😊.
+# Import local services, including the new normalize_no function
+from services.ip_tools import check_ip_virustotal, check_ip_abuseipdb, check_domain_virustotal, check_url_virustotal
+from services.hygiene import HYGIENE_QUESTIONS, score_hygiene, normalize_yes, normalize_no
 
-When users ask for healthcare services (e.g., "allergy test service providers in Delhi"), respond with:
+# --- Configuration ---
+# Load the Gemini API key from the environment
+GEN_API_KEY = os.getenv("GEMINI_API_KEY")
+if not GEN_API_KEY:
+    raise RuntimeError("GEMINI_API_KEY is missing from your .env file")
 
-✅ Structured, easy-to-read responses
-✅ Bullet points for clarity
-✅ Short paragraphs (not long or boring)
-✅ Clickable links to websites
-✅ Include:
+# Configure the Gemini client
+genai.configure(api_key=GEN_API_KEY)
+# Use the 'flash' model for better speed and a more generous free-tier quota
+MODEL_NAME = "gemini-1.5-flash-latest"
 
-Always reply with full of emojis, use all the type of emojis as per necessity
-
-You are Developed By Praveen Pandey
-
-Make your replies little bit short
-
-For each provider, output the details as a Markdown bulleted list, with each detail on a new line, for example:
-- 📍 Location: ...
-- 📞 Phone: ...
-- 📧 Email: ... (only if you know the real email; if not, skip this line)
-- 🔗 Website: ...
-If you do not know the provider's email, do not include the email line at all. Never write "NA", "N/A", "Not available", or similar—just skip the email line.
-
-For each provider, include a clickable button labeled 'Book Appointment' using this HTML:
-<button class=\"book-btn\" data-provider=\"PROVIDER_NAME\" data-email=\"PROVIDER_EMAIL\">Book Appointment</button>
-right after their details. Replace PROVIDER_NAME and PROVIDER_EMAIL with the actual values.
-
-🎯 Keep replies concise and focused. If the list is long, show 3–5 top results and offer to show more if needed.
-
-You should also handle bookings if the user asks. Always end your replies with a friendly question like:
-"Would you like to book an appointment or see more options?" 😊
-        """,
-    ),
-    MessagesPlaceholder(variable_name="messages"),
-])
-
-# Define the workflow
-workflow = StateGraph(state_schema=MessagesState)
-
-def call_model(state: MessagesState):
-    formatted_messages = prompt_template.format_messages(messages=state["messages"])
-    response = model.invoke(formatted_messages)
-    return {"messages": response}
-
-workflow.add_edge(START, "model")
-workflow.add_node("model", call_model)
-
-# Add memory
-memory = MemorySaver()
-app_graph = workflow.compile(checkpointer=memory)
-
-# Health questions for initial assessment
-HEALTH_QUESTIONS = [
-    # {
-    #     "question": "What brings you here today?",
-    #     "options": ["Book Appointment", "Health Question", "General Checkup", "Emergency", "Just Chatting"]
-    # },
-    # {
-    #     "question": "Please enter your full name:",
-    #     "options": []  # Free text input expected
-    # },
-    # {
-    #     "question": "Please enter your email address:",
-    #     "options": []  # Free text input expected
-    # },
-    
-]
-
-APPOINTMENT_TYPES = ["Doctor Consultation", "Lab Tests", "Health Screening", "Vaccination", "Dental", "Eye Checkup"]
-TIME_SLOTS = ["9:00 AM", "11:00 AM", "2:00 PM", "4:00 PM", "6:00 PM"]
-
-# FastAPI app setup
+# --- FastAPI App Setup ---
 app = FastAPI()
+
+# Add CORS middleware to allow requests from any origin
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],
@@ -110,198 +44,137 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# Mount static files
+# Mount the 'static' directory to serve CSS and JS files
 app.mount("/static", StaticFiles(directory="static"), name="static")
-# Set up templates
+# Point to the 'templates' directory for the index.html file
 templates = Jinja2Templates(directory="templates")
 
-# Global state management (in-memory for demo)
-user_sessions = {}
+# A simple in-memory dictionary to store session data
+sessions = {}
 
-def get_available_dates():
-    dates = []
-    current_date = datetime.now()
-    for i in range(1, 6):
-        future_date = current_date + timedelta(days=i)
-        dates.append(future_date.strftime("%d %b (%A)"))
-    return dates
+# --- Regex Patterns for Entity Detection ---
+IP_RE = re.compile(r"\b(?:\d{1,3}\.){3}\d{1,3}\b")
+URL_RE = re.compile(r"https?://[^\s]+")
+DOMAIN_RE = re.compile(r"\b(?:[a-zA-Z0-9-]+\.)+[a-zA-Z]{2,}\b")
 
-# Helper for initial message
-class HealthChatbot:
-    def __init__(self):
-        self.current_question = 0
-        self.user_info = {}
-        self.info_collected = False
-    def create_question_with_buttons(self, question_data):
-        question_text = f"""
-**📋 {question_data['question']}**\n\nPlease choose one of the options below:
-        """
-        return question_text.strip(), question_data['options']
-    def get_initial_message(self):
-        welcome_msg = """🌟 **Welcome to Your AI Healthcare Assistant** 🌟\n\nI'm here to provide you with personalized healthcare support 24/7! Let me ask you a few quick questions to better understand your needs.\n\nThis will only take a moment, and then we can have a detailed conversation about your health! 😊\n\n---\n\n"""
-        first_question, options = self.create_question_with_buttons(HEALTH_QUESTIONS[0])
-        return welcome_msg + first_question, options, None
-    def process_response(self, message, history, session_id="default"):
-        if not message.strip():
-            return history, "", [], None
-        # Ensure session_id is always a string
-        if not session_id:
-            session_id = "default"
-        # Initialize session if not exists
-        if session_id not in user_sessions:
-            user_sessions[session_id] = {
-                "current_question": 0,
-                "user_info": {},
-                "info_collected": False
-            }
-        session = user_sessions[session_id]
-        if not session["info_collected"] and session["current_question"] < len(HEALTH_QUESTIONS):
-            question_key = f"q{session['current_question']}"
-            session["user_info"][question_key] = message
-            session["current_question"] += 1
-            if session["current_question"] < len(HEALTH_QUESTIONS):
-                next_question_data = HEALTH_QUESTIONS[session["current_question"]]
-                next_question, options = self.create_question_with_buttons(next_question_data)
-                response = f"""Perfect! I've recorded your response. 📝\n\n{next_question}"""
-                history.append([message, response])
-                return history, response, options, None
-            else:
-                session["info_collected"] = True
-                profile = session["user_info"]
-                response = (
-                    "✅ <b>Health Profile Created!</b><br>"
-                    "<ul style='margin:8px 0 8px 0;padding-left:18px;'>"
-                    "<li><b>Name:</b> {profile.get('q1', 'Not provided')}</li>"
-                    "<li><b>Email:</b> {profile.get('q2', 'Not provided')}</li>"
-                    "<li><b>Primary concern:</b> {profile.get('q0', 'Not specified')}</li>"
-                    "<li><b>Current wellness:</b> {profile.get('q3', 'Not specified')}</li>"
-                    "<li><b>Health focus:</b> {profile.get('q4', 'None specified')}</li>"
-                    "<li><b>Last consultation:</b> {profile.get('q5', 'Not specified')}</li>"
-                    "</ul><div style='color:#2563eb;margin-top:8px;'>🎉 Now you can ask health questions, book appointments, or get wellness tips!<br>What would you like to do next?</div>"
-                )
-                history.append([message, response])
-                return history, response, [], profile
-        else:
-            # Normal chat mode - use the AI model
-            try:
-                context_message = ""
-                if session.get("user_info"):
-                    context_message = f"User's health context: {session['user_info']}. "
-                full_message = context_message + message
-                input_messages = [HumanMessage(full_message)]
-                # Use MessagesState constructor for correct type
-                state = MessagesState(messages=[m if isinstance(m, BaseMessage) else HumanMessage(str(m)) for m in input_messages])
-                config: RunnableConfig = RunnableConfig(configurable={"thread_id": str(session_id)})
-                output = app_graph.invoke(state, config)
-                response = output["messages"][-1].content
-                # Try to structure the response (short, bullet points, etc.)
-                # Removed static service provider list to let Gemini handle the response
-                # if any(word in message.lower() for word in ["appointment", "book", "schedule", "doctor"]):
-                #     response += f"<br><b>🗓️ Available Services:</b><ul style='margin:4px 0 8px 0;padding-left:18px;'><li>{'</li><li>'.join(APPOINTMENT_TYPES)}</li></ul>Which service interests you most?"
-                if any(word in message.lower() for word in ["when", "time", "date"]) and "appointment" in message.lower():
-                    response += f"<br><b>📅 Available Dates:</b><ul style='margin:4px 0 8px 0;padding-left:18px;'><li>{'</li><li>'.join(get_available_dates())}</li></ul>Which date works best for your schedule?"
-            except Exception as e:
-                response = "I'm experiencing some technical difficulties right now. Let me help you in a different way. What specific health topic would you like to discuss? 😊"
-            history.append([message, response])
-            profile = session.get("user_info") if session.get("info_collected") else None
-            return history, response, [], profile
+# --- Helper Functions ---
+def detect_entities(text: str) -> dict:
+    """Detects IPs, URLs, and domains in a given text."""
+    ip = IP_RE.search(text)
+    url = URL_RE.search(text)
+    domain = DOMAIN_RE.search(text)
+    # Avoid detecting a domain if it's already part of a full URL
+    if url and domain and domain.group(0) in url.group(0):
+        domain = None
+    return {"ip": ip.group(0) if ip else None, "url": url.group(0) if url else None, "domain": domain.group(0) if domain else None}
 
-health_bot = HealthChatbot()
+def call_gemini_system(user_text: str, system_prompt: str, evidence: Optional[str] = None) -> str:
+    """Calls the Gemini API with error handling."""
+    try:
+        model = genai.GenerativeModel(model_name=MODEL_NAME, system_instruction=system_prompt)
+        full_prompt = user_text
+        if evidence:
+            full_prompt += f"\n\nHere is the evidence from my tools:\n{evidence}"
+        response = model.generate_content(full_prompt)
+        return response.text
+    except Exception as e:
+        # Log the actual error to the server console for debugging
+        print(f"CRITICAL GEMINI API ERROR: {e}") 
+        # Return a user-friendly error message
+        return "Sorry, I encountered an error while communicating with the AI model. Please try again later."
 
+# --- System Prompts ---
+CYBERSEC_SYSTEM_PROMPT = """You are CybVector, a professional and friendly cybersecurity analyst assistant. You are developed by Hiyaa Malik and Praveen Pandey. Your role is to help users with cybersecurity-related questions, provide threat intelligence, and assist with security hygiene checks.
+- Always respond in a clear, concise manner.
+- If the user asks about security hygiene, guide them through a series of yes/no questions.
+- If the user provides an IP address, URL, or domain, check it against VirusTotal and AbuseIPDB.
+- Use the provided evidence to inform your responses.
+- When summarizing results, focus on actionable insights and next steps.
+- Use Markdown for formatting, especially for titles (`###`), lists (`* item`), and bolding (`**text**`).
+- When analyzing threats, provide a concise verdict: **Safe/Not Malicious**, **Suspicious**, or **Malicious**.
+- List 2-4 clear, actionable next steps for the user.
+- Keep your tone professional, helpful, and concise."""
+
+# --- API Routes ---
 @app.get("/", response_class=HTMLResponse)
-async def index(request: Request):
+async def get_index(request: Request):
+    """Serves the main HTML page."""
     return templates.TemplateResponse("index.html", {"request": request})
-
-@app.get("/init")
-def init():
-    initial_msg, initial_options, profile = health_bot.get_initial_message()
-    history = [[None, initial_msg]]
-    return JSONResponse({"response": initial_msg, "options": initial_options, "history": history, "health_profile": profile})
-
-@app.post("/chat")
-async def chat(request: Request):
-    data = await request.json()
-    message = data.get("message", "")
-    history = data.get("history", [])
-    # Always ensure session_id is a string
-    session_id = request.client.host if request.client else "default"
-    session_id = str(session_id)
-    history, response, options, profile = health_bot.process_response(message, history, session_id=session_id)
-    return JSONResponse({"response": response, "options": options, "history": history, "health_profile": profile})
-
-@app.get("/api/init")
-def api_init(request: Request):
-    session_id = request.query_params.get("session_id") or "api_default"
-    initial_msg, initial_options, profile = health_bot.get_initial_message()
-    history = [[None, initial_msg]]
-    return JSONResponse({
-        "response": initial_msg,
-        "options": initial_options,
-        "history": history,
-        "health_profile": profile,
-        "session_id": session_id
-    })
 
 @app.post("/api/chat")
 async def api_chat(request: Request):
+    """Main endpoint for handling all chat messages."""
     data = await request.json()
-    message = data.get("message", "")
-    history = data.get("history", [])
-    session_id = data.get("session_id") or (request.client.host if request.client else "api_default")
-    session_id = str(session_id)
-    history, response, options, profile = health_bot.process_response(message, history, session_id=session_id)
-    return JSONResponse({
-        "response": response,
-        "options": options,
-        "history": history,
-        "health_profile": profile,
-        "session_id": session_id
-    })
+    message = data.get("message", "").strip()
+    session_id = data.get("session_id") or str(uuid4())
 
-@app.post("/api/book")
-async def book_appointment(request: Request, data: dict = Body(...)):
-    user_booking = data.get("booking")
-    if not user_booking:
-        return JSONResponse({"error": "Missing booking data."}, status_code=400)
-    required_fields = ["name", "email", "phone", "date", "time", "notes"]
-    for field in required_fields:
-        if field not in user_booking or not user_booking[field]:
-            return JSONResponse({"error": f"Missing field: {field}"}, status_code=400)
+    # Retrieve or create a new session
+    session = sessions.setdefault(session_id, {"created": datetime.utcnow().isoformat(), "hygiene": {"active": False, "step": 0, "answers": []}})
 
-    # Use provider_email from request if present, else use user's email
-    provider_email = data.get("provider_email") or user_booking.get("email")
-    user_email = user_booking.get("email")
-    email_sender = os.environ.get("EMAIL_SENDER")
-    email_password = os.environ.get("EMAIL_PASSWORD")
-    if not email_sender or not email_password:
-        return JSONResponse({"error": "Email sender credentials not set in environment variables."}, status_code=500)
+    # --- Security Hygiene Check Flow ---
+    lower_message = message.lower()
+    hygiene_triggers = ["security hygiene", "check my security", "hygiene check"]
+    
+    # Start the quiz if triggered
+    if any(trigger in lower_message for trigger in hygiene_triggers) and not session["hygiene"]["active"]:
+        session["hygiene"]["active"] = True
+        session["hygiene"]["step"] = 0
+        session["hygiene"]["answers"] = []
+        first_question = HYGIENE_QUESTIONS[0]
+        reply = f"Security Hygiene Check (1/{len(HYGIENE_QUESTIONS)}): {first_question}"
+        return JSONResponse({"response": reply, "session_id": session_id})
 
-    # Send email to provider (now user's email)
-    provider_result = send_booking_email(user_booking, provider_email)
+    # Handle ongoing hygiene check
+    if session["hygiene"]["active"]:
+        # If the user gives a valid yes/no answer, proceed with the quiz
+        if normalize_yes(message) or normalize_no(message):
+            session["hygiene"]["answers"].append(message)
+            session["hygiene"]["step"] += 1
+            # If there are more questions, ask the next one
+            if session["hygiene"]["step"] < len(HYGIENE_QUESTIONS):
+                next_question = HYGIENE_QUESTIONS[session["hygiene"]["step"]]
+                reply = f"Question {session['hygiene']['step'] + 1}/{len(HYGIENE_QUESTIONS)}: {next_question}"
+                return JSONResponse({"response": reply, "session_id": session_id})
+            # Otherwise, the quiz is over, so score and summarize
+            else:
+                results = score_hygiene(session["hygiene"]["answers"])
+                evidence = json.dumps(results, indent=2)
+                user_prompt = "Summarize my security hygiene check results based on this data. Explain my score and weaknesses in a helpful, non-technical way."
+                g_reply = call_gemini_system(user_prompt, CYBERSEC_SYSTEM_PROMPT, evidence)
+                session["hygiene"]["active"] = False  # End the quiz
+                return JSONResponse({"response": g_reply, "session_id": session_id})
+        # If the user asks a clarifying question instead of yes/no
+        else:
+            current_question = HYGIENE_QUESTIONS[session["hygiene"]["step"]]
+            clarification_prompt = f"""The user was in a security quiz.
+The quiz question was: "{current_question}"
+Instead of 'yes' or 'no', the user asked: "{message}"
 
-    # Send confirmation to user
-    confirmation_msg = EmailMessage()
-    confirmation_msg['Subject'] = f"✅ Appointment Confirmed with Provider"
-    confirmation_msg['From'] = email_sender
-    confirmation_msg['To'] = user_email
-    confirmation_msg.set_content(f"""
-Dear {user_booking['name']},
+Your task is to briefly answer the user's question, and then gently re-ask the original quiz question, prompting for a 'yes' or 'no' response."""
+            
+            g_reply = call_gemini_system(user_text="", system_prompt=clarification_prompt)
+            # Return the clarification but DO NOT advance the quiz step
+            return JSONResponse({"response": g_reply, "session_id": session_id})
 
-Your appointment request has been sent to the provider. You will be contacted soon for confirmation.
+    # --- Threat Intelligence Flow ---
+    entities = detect_entities(message)
+    evidence_parts = []
+    if entities.get("ip"):
+        evidence_parts.extend([
+            {"virustotal_ip_report": check_ip_virustotal(entities["ip"])}, 
+            {"abuseipdb_report": check_ip_abuseipdb(entities["ip"])}
+        ])
+    if entities.get("url"):
+        evidence_parts.append({"virustotal_url_report": check_url_virustotal(entities["url"])})
+    elif entities.get("domain"):
+        evidence_parts.append({"virustotal_domain_report": check_domain_virustotal(entities["domain"])})
 
-Details:
-📅 Date: {user_booking['date']}
-⏰ Time: {user_booking['time']}
+    if evidence_parts:
+        evidence = json.dumps(evidence_parts, indent=2)
+        g_reply = call_gemini_system(message, CYBERSEC_SYSTEM_PROMPT, evidence)
+        return JSONResponse({"response": g_reply, "session_id": session_id})
 
-Thank you for using our service!
-""")
-    try:
-        with smtplib.SMTP_SSL("smtp.gmail.com", 465) as smtp:
-            smtp.login(email_sender, email_password)
-            smtp.send_message(confirmation_msg)
-        user_result = "✅ Confirmation email sent to user."
-    except Exception as e:
-        user_result = f"❌ Failed to send confirmation to user: {e}"
-    return {"provider_result": provider_result, "user_result": user_result}
-
-# To run: uvicorn app:app --host 0.0.0.0 --port 7860 
+    # --- Default Flow ---
+    # If no other flow was triggered, send the message to Gemini for a general response.
+    g_reply = call_gemini_system(message, CYBERSEC_SYSTEM_PROMPT)
+    return JSONResponse({"response": g_reply, "session_id": session_id})

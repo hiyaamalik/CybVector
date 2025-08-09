@@ -1,51 +1,833 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>AGENT X - Your Smart Health Companion</title>
-  <link rel="stylesheet" href="/static/styles.css">
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600&display=swap" rel="stylesheet">
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>CybVector  | AI Security Assistant</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Fira+Code:wght@400;500&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            /* Cyber Security Color Palette */
+            --cyber-dark: #0d1117;
+            --cyber-navy: #161b22;
+            --cyber-blue: #1f6feb;
+            --cyber-light-blue: #58a6ff;
+            --cyber-green: #238636;
+            --cyber-light-green: #2ea043;
+            --cyber-red: #da3633;
+            --cyber-orange: #d29922;
+            --cyber-purple: #8957e5;
+            --cyber-gray: #8b949e;
+            --cyber-light-gray: #c9d1d9;
+            --cyber-white: #f0f6fc;
+            
+            /* Status Colors */
+            --status-safe: #3fb950;
+            --status-warning: #d29922;
+            --status-critical: #f85149;
+            
+            /* Fonts */
+            --font-sans: 'Inter', sans-serif;
+            --font-mono: 'Fira Code', monospace;
+            
+            /* Shadows */
+            --shadow-sm: 0 1px 3px rgba(0, 0, 0, 0.12);
+            --shadow-md: 0 4px 6px rgba(0, 0, 0, 0.15);
+            --shadow-lg: 0 10px 25px rgba(0, 0, 0, 0.2);
+            
+            /* Borders */
+            --border-radius-sm: 4px;
+            --border-radius-md: 8px;
+            --border-radius-lg: 12px;
+            
+            /* Spacing */
+            --space-xs: 0.25rem;
+            --space-sm: 0.5rem;
+            --space-md: 1rem;
+            --space-lg: 1.5rem;
+            --space-xl: 2rem;
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            background-color: var(--cyber-dark);
+            color: var(--cyber-light-gray);
+            font-family: var(--font-sans);
+            height: 100vh;
+            overflow: hidden;
+            background-image: 
+                linear-gradient(rgba(255, 255, 255, 0.02) 1px, transparent 1px),
+                linear-gradient(90deg, rgba(255, 255, 255, 0.02) 1px, transparent 1px);
+            background-size: 24px 24px;
+        }
+
+        .container {
+            display: flex;
+            height: 100vh;
+            max-width: 1800px;
+            margin: 0 auto;
+            gap: 1px;
+        }
+
+        /* ====================== */
+        /* SECURITY DASHBOARD */
+        /* ====================== */
+        .security-dashboard {
+            width: 320px;
+            background-color: var(--cyber-navy);
+            display: flex;
+            flex-direction: column;
+            border-right: 1px solid rgba(255, 255, 255, 0.05);
+            overflow: hidden;
+        }
+
+        .dashboard-header {
+            padding: var(--space-lg);
+            border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+        }
+
+        .logo {
+            display: flex;
+            align-items: center;
+            gap: var(--space-sm);
+            margin-bottom: var(--space-md);
+        }
+
+        .logo i {
+            font-size: 1.75rem;
+            color: var(--cyber-blue);
+        }
+
+        .logo h1 {
+            font-size: 1.5rem;
+            font-weight: 600;
+            color: var(--cyber-white);
+        }
+
+        .logo .version {
+            font-size: 0.75rem;
+            color: var(--cyber-gray);
+            margin-left: var(--space-xs);
+            font-weight: 400;
+        }
+
+        .user-status {
+            display: flex;
+            align-items: center;
+            gap: var(--space-sm);
+            font-size: 0.875rem;
+            color: var(--cyber-gray);
+        }
+
+        .status-indicator {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            background-color: var(--status-safe);
+        }
+
+        .status-indicator.active {
+            animation: pulse 2s infinite;
+        }
+
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.5; }
+        }
+
+        .security-modules {
+            padding: var(--space-md);
+            flex: 1;
+            overflow-y: auto;
+        }
+
+        .module {
+            padding: var(--space-md);
+            margin-bottom: var(--space-sm);
+            border-radius: var(--border-radius-md);
+            cursor: pointer;
+            transition: all 0.2s ease;
+            border-left: 3px solid transparent;
+        }
+
+        .module:hover {
+            background-color: rgba(255, 255, 255, 0.03);
+        }
+
+        .module.active {
+            background-color: rgba(31, 111, 235, 0.1);
+            border-left: 3px solid var(--cyber-blue);
+        }
+
+        .module i {
+            font-size: 1.25rem;
+            color: var(--cyber-blue);
+            margin-bottom: var(--space-sm);
+        }
+
+        .module h3 {
+            font-size: 1rem;
+            font-weight: 500;
+            color: var(--cyber-white);
+            margin-bottom: var(--space-xs);
+        }
+
+        .module p {
+            font-size: 0.8125rem;
+            color: var(--cyber-gray);
+            line-height: 1.5;
+        }
+
+        .quick-actions {
+            padding: var(--space-md);
+            border-top: 1px solid rgba(255, 255, 255, 0.05);
+            border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+        }
+
+        .quick-actions h4 {
+            font-size: 0.875rem;
+            font-weight: 500;
+            color: var(--cyber-gray);
+            margin-bottom: var(--space-md);
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .action-btn {
+            display: flex;
+            align-items: center;
+            gap: var(--space-sm);
+            width: 100%;
+            padding: var(--space-sm) var(--space-md);
+            margin-bottom: var(--space-sm);
+            background-color: rgba(255, 255, 255, 0.05);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: var(--border-radius-sm);
+            color: var(--cyber-light-gray);
+            font-size: 0.875rem;
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+
+        .action-btn:hover {
+            background-color: rgba(31, 111, 235, 0.2);
+            border-color: var(--cyber-blue);
+            color: var(--cyber-light-blue);
+        }
+
+        .action-btn i {
+            font-size: 0.875rem;
+        }
+
+        .security-status {
+            padding: var(--space-md);
+        }
+
+        .status-meter {
+            background-color: rgba(255, 255, 255, 0.03);
+            border-radius: var(--border-radius-sm);
+            padding: var(--space-md);
+        }
+
+        .meter-labels {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: var(--space-sm);
+            font-size: 0.8125rem;
+        }
+
+        .meter-labels span:first-child {
+            color: var(--cyber-gray);
+        }
+
+        .meter-labels span:last-child {
+            color: var(--cyber-light-blue);
+            font-weight: 500;
+        }
+
+        .meter-bar {
+            height: 6px;
+            background-color: rgba(255, 255, 255, 0.05);
+            border-radius: 3px;
+            overflow: hidden;
+        }
+
+        .meter-fill {
+            height: 100%;
+            background: linear-gradient(90deg, var(--cyber-green), var(--cyber-light-green));
+            border-radius: 3px;
+        }
+
+        /* ====================== */
+        /* SECURITY CONSOLE */
+        /* ====================== */
+        .security-console {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            background-color: var(--cyber-navy);
+            overflow: hidden;
+        }
+
+        .console-header {
+            padding: var(--space-md) var(--space-lg);
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+        }
+
+        .console-info {
+            display: flex;
+            align-items: center;
+            gap: var(--space-md);
+        }
+
+        .console-info i {
+            font-size: 1.25rem;
+            color: var(--cyber-blue);
+        }
+
+        .console-info h2 {
+            font-size: 1.125rem;
+            font-weight: 500;
+            color: var(--cyber-white);
+        }
+
+        .console-status {
+            display: flex;
+            align-items: center;
+            gap: var(--space-lg);
+        }
+
+        .status-pill {
+            display: flex;
+            align-items: center;
+            gap: var(--space-sm);
+            padding: var(--space-xs) var(--space-sm);
+            border-radius: 20px;
+            font-size: 0.8125rem;
+            background-color: rgba(35, 134, 54, 0.1);
+            color: var(--status-safe);
+        }
+
+        .status-pill.online {
+            background-color: rgba(35, 134, 54, 0.1);
+            color: var(--status-safe);
+        }
+
+        .status-dot {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            background-color: var(--status-safe);
+        }
+
+        .timestamp {
+            font-size: 0.8125rem;
+            color: var(--cyber-gray);
+            font-family: var(--font-mono);
+        }
+
+        .console-body {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+        }
+
+        .chat-messages {
+            flex: 1;
+            overflow-y: auto;
+            padding: var(--space-lg);
+            scroll-behavior: smooth;
+        }
+
+        .welcome-message {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            height: 100%;
+            text-align: center;
+            padding: var(--space-xl);
+            color: var(--cyber-gray);
+        }
+
+        .welcome-icon {
+            width: 80px;
+            height: 80px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background-color: rgba(31, 111, 235, 0.1);
+            margin-bottom: var(--space-lg);
+        }
+
+        .welcome-icon i {
+            font-size: 2.5rem;
+            color: var(--cyber-blue);
+        }
+
+        .welcome-message h3 {
+            font-size: 1.5rem;
+            font-weight: 500;
+            color: var(--cyber-white);
+            margin-bottom: var(--space-sm);
+        }
+
+        .welcome-message p {
+            max-width: 500px;
+            margin-bottom: var(--space-lg);
+            line-height: 1.6;
+        }
+
+        .welcome-suggestions {
+            display: flex;
+            gap: var(--space-md);
+            margin-top: var(--space-lg);
+        }
+
+        .suggestion-chip {
+            padding: var(--space-sm) var(--space-md);
+            background-color: rgba(31, 111, 235, 0.1);
+            border: 1px solid rgba(31, 111, 235, 0.2);
+            border-radius: 20px;
+            color: var(--cyber-light-blue);
+            font-size: 0.875rem;
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+
+        .suggestion-chip:hover {
+            background-color: rgba(31, 111, 235, 0.2);
+        }
+
+        .message {
+            display: flex;
+            gap: var(--space-md);
+            margin-bottom: var(--space-lg);
+            max-width: 85%;
+        }
+
+        .message.user {
+            margin-left: auto;
+            flex-direction: row-reverse;
+        }
+
+        .message-avatar {
+            width: 36px;
+            height: 36px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            flex-shrink: 0;
+            background-color: rgba(255, 255, 255, 0.05);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        .message.bot .message-avatar {
+            background-color: rgba(31, 111, 235, 0.1);
+            border-color: rgba(31, 111, 235, 0.3);
+        }
+
+        .message.bot .message-avatar i {
+            color: var(--cyber-blue);
+            font-size: 0.875rem;
+        }
+
+        .message.user .message-avatar {
+            background-color: rgba(88, 166, 255, 0.1);
+            border-color: rgba(88, 166, 255, 0.3);
+        }
+
+        .message.user .message-avatar i {
+            color: var(--cyber-light-blue);
+            font-size: 0.875rem;
+        }
+
+        .message-content {
+            padding: var(--space-md);
+            border-radius: var(--border-radius-md);
+            line-height: 1.6;
+            font-size: 0.9375rem;
+        }
+
+        .message.bot .message-content {
+            background-color: rgba(255, 255, 255, 0.03);
+            border: 1px solid rgba(255, 255, 255, 0.05);
+            color: var(--cyber-light-gray);
+        }
+
+        .message.user .message-content {
+            background-color: rgba(31, 111, 235, 0.15);
+            border: 1px solid rgba(31, 111, 235, 0.3);
+            color: var(--cyber-white);
+        }
+
+        .message-content p {
+            margin-bottom: var(--space-sm);
+        }
+
+        .message-content p:last-child {
+            margin-bottom: 0;
+        }
+
+        .message-content strong {
+            color: var(--cyber-white);
+            font-weight: 500;
+        }
+
+        .message-content a {
+            color: var(--cyber-light-blue);
+            text-decoration: none;
+        }
+
+        .message-content a:hover {
+            text-decoration: underline;
+        }
+
+        .message-content ul, 
+        .message-content ol {
+            padding-left: 1.25rem;
+            margin-bottom: var(--space-sm);
+        }
+
+        .message-content li {
+            margin-bottom: var(--space-xs);
+        }
+
+        .message-content code {
+            font-family: var(--font-mono);
+            font-size: 0.875rem;
+            background-color: rgba(0, 0, 0, 0.3);
+            padding: 0.125rem 0.25rem;
+            border-radius: var(--border-radius-sm);
+            color: var(--cyber-light-blue);
+        }
+
+        .message-content pre {
+            background-color: rgba(0, 0, 0, 0.3);
+            padding: var(--space-md);
+            border-radius: var(--border-radius-md);
+            overflow-x: auto;
+            margin: var(--space-sm) 0;
+            border-left: 3px solid var(--cyber-blue);
+        }
+
+        .message-content pre code {
+            background-color: transparent;
+            padding: 0;
+        }
+
+        .data-card {
+            background-color: rgba(0, 0, 0, 0.3);
+            padding: var(--space-md);
+            border-radius: var(--border-radius-md);
+            border-left: 3px solid var(--cyber-purple);
+            font-family: var(--font-mono);
+            font-size: 0.875rem;
+            line-height: 1.6;
+            margin: var(--space-sm) 0;
+        }
+
+        .typing-indicator {
+            display: none;
+            padding: 0 var(--space-lg);
+            margin-bottom: var(--space-lg);
+        }
+
+        .typing-indicator .message-content {
+            background-color: transparent;
+            border: none;
+            padding: 0;
+            display: flex;
+            align-items: center;
+            gap: var(--space-sm);
+        }
+
+        .typing-text {
+            color: var(--cyber-gray);
+            font-size: 0.875rem;
+        }
+
+        .typing-animation {
+            display: flex;
+            align-items: center;
+            gap: 4px;
+        }
+
+        .typing-animation .dot {
+            width: 6px;
+            height: 6px;
+            border-radius: 50%;
+            background-color: var(--cyber-gray);
+            animation: typing-bounce 1.4s infinite ease-in-out;
+        }
+
+        .typing-animation .dot:nth-child(2) {
+            animation-delay: 0.2s;
+        }
+
+        .typing-animation .dot:nth-child(3) {
+            animation-delay: 0.4s;
+        }
+
+        @keyframes typing-bounce {
+            0%, 80%, 100% { transform: translateY(0); }
+            40% { transform: translateY(-5px); }
+        }
+
+        .console-input {
+            padding: var(--space-md) var(--space-lg);
+            border-top: 1px solid rgba(255, 255, 255, 0.05);
+            background-color: rgba(255, 255, 255, 0.02);
+        }
+
+        .input-group {
+            display: flex;
+            gap: var(--space-md);
+            margin-bottom: var(--space-sm);
+        }
+
+        .console-input input {
+            flex: 1;
+            padding: var(--space-md);
+            background-color: rgba(255, 255, 255, 0.03);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: var(--border-radius-md);
+            color: var(--cyber-white);
+            font-family: var(--font-sans);
+            font-size: 0.9375rem;
+            transition: all 0.2s ease;
+        }
+
+        .console-input input:focus {
+            outline: none;
+            border-color: var(--cyber-blue);
+            box-shadow: 0 0 0 3px rgba(31, 111, 235, 0.2);
+        }
+
+        .send-btn {
+            width: 50px;
+            background-color: var(--cyber-blue);
+            color: var(--cyber-white);
+            border: none;
+            border-radius: var(--border-radius-md);
+            cursor: pointer;
+            transition: all 0.2s ease;
+            font-size: 1.25rem;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .send-btn:hover {
+            background-color: var(--cyber-light-blue);
+        }
+
+        .send-btn:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+
+        .input-footer {
+            display: flex;
+            justify-content: space-between;
+            font-size: 0.75rem;
+            color: var(--cyber-gray);
+        }
+
+        .privacy-notice {
+            display: flex;
+            align-items: center;
+            gap: var(--space-xs);
+        }
+
+        .privacy-notice i {
+            font-size: 0.75rem;
+        }
+
+        .shortcuts kbd {
+            background-color: rgba(255, 255, 255, 0.1);
+            padding: 0.125rem 0.25rem;
+            border-radius: var(--border-radius-sm);
+            font-family: var(--font-mono);
+            font-size: 0.6875rem;
+        }
+
+        /* Custom Scrollbar */
+        .chat-messages::-webkit-scrollbar {
+            width: 8px;
+        }
+
+        .chat-messages::-webkit-scrollbar-track {
+            background: var(--cyber-navy);
+        }
+
+        .chat-messages::-webkit-scrollbar-thumb {
+            background-color: var(--cyber-gray);
+            border-radius: 4px;
+        }
+
+        .chat-messages::-webkit-scrollbar-thumb:hover {
+            background-color: var(--cyber-light-gray);
+        }
+    </style>
 </head>
 <body>
-  <header class="main-header">
-    <div class="header-left">
-      <img src="https://cdn-icons-png.flaticon.com/512/3774/3774299.png" alt="AGENT X Logo" class="header-logo" />
-      <span class="header-title">AGENT X</span>
+    <div class="container">
+        <!-- Security Dashboard Sidebar -->
+        <aside class="security-dashboard">
+            <div class="dashboard-header">
+                <div class="logo">
+                    <i class="fas fa-shield-alt"></i>
+                    <h1>CybVector<span class="version">v2.1</span></h1>
+                </div>
+                <div class="user-status">
+                    <div class="status-indicator active"></div>
+                    <span>Operational</span>
+                </div>
+            </div>
+            
+            <div class="security-modules">
+                <div class="module active">
+                    <i class="fas fa-robot"></i>
+                    <h3>AI Security Assistant</h3>
+                    <p>Interactive threat analysis and guidance</p>
+                </div>
+                <div class="module">
+                    <i class="fas fa-search"></i>
+                    <h3>Threat Analysis</h3>
+                    <p>Analyze IPs, domains, and URLs</p>
+                </div>
+                <div class="module">
+                    <i class="fas fa-shield-virus"></i>
+                    <h3>Security Hygiene</h3>
+                    <p>System health checks and audits</p>
+                </div>
+                <div class="module">
+                    <i class="fas fa-user-secret"></i>
+                    <h3>Expert Advice</h3>
+                    <p>Best practices and recommendations</p>
+                </div>
+                <div class="module">
+                    <i class="fas fa-first-aid"></i>
+                    <h3>Incident Response</h3>
+                    <p>Security incident guidance</p>
+                </div>
+            </div>
+            
+            <div class="quick-actions">
+                <h4>Quick Actions</h4>
+                <button class="action-btn" onclick="sendSuggestion('Check DNS records for example.com')">
+                    <i class="fas fa-globe"></i> DNS Lookup
+                </button>
+                <button class="action-btn" onclick="sendSuggestion('Run security hygiene check')">
+                    <i class="fas fa-broom"></i> Hygiene Scan
+                </button>
+                <button class="action-btn" onclick="sendSuggestion('Generate strong password recommendations')">
+                    <i class="fas fa-key"></i> Password Tips
+                </button>
+            </div>
+            
+            <div class="security-status">
+                <div class="status-meter">
+                    <div class="meter-labels">
+                        <span>Security Level</span>
+                        <span>85%</span>
+                    </div>
+                    <div class="meter-bar">
+                        <div class="meter-fill" style="width: 85%"></div>
+                    </div>
+                </div>
+            </div>
+        </aside>
+        
+        <!-- Main Security Console -->
+        <main class="security-console">
+            <div class="console-header">
+                <div class="console-info">
+                    <i class="fas fa-terminal"></i>
+                    <h2>Security Analyst Console</h2>
+                </div>
+                <div class="console-status">
+                    <div class="status-pill online">
+                        <div class="status-dot"></div>
+                        <span>Secure Connection</span>
+                    </div>
+                    <div class="timestamp" id="current-time">14:32:45 UTC</div>
+                </div>
+            </div>
+            
+            <div class="console-body">
+                <div class="chat-messages" id="chatMessages">
+                    <div class="welcome-message">
+                        <div class="welcome-icon">
+                            <i class="fas fa-shield-alt"></i>
+                        </div>
+                        <h3>CybVector</h3>
+                        <p>Your AI-powered security analyst is ready to assist with threat analysis, security recommendations, and incident response.</p>
+                        <div class="welcome-suggestions">
+                            <button class="suggestion-chip" onclick="sendSuggestion('How do I check for vulnerabilities?')">
+                                Vulnerability Check
+                            </button>
+                            <button class="suggestion-chip" onclick="sendSuggestion('Analyze this suspicious URL')">
+                                URL Analysis
+                            </button>
+                            <button class="suggestion-chip" onclick="sendSuggestion('Best practices for firewall configuration')">
+                                Firewall Tips
+                            </button>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="typing-indicator" id="typingIndicator">
+                    <div class="message bot">
+                        <div class="message-avatar">
+                            <i class="fas fa-robot"></i>
+                        </div>
+                        <div class="message-content">
+                            <span class="typing-text">Analyzing request</span>
+                            <div class="typing-animation">
+                                <div class="dot"></div>
+                                <div class="dot"></div>
+                                <div class="dot"></div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="console-input">
+                    <div class="input-group">
+                        <input type="text" id="messageInput" placeholder="Ask about threats, vulnerabilities, or security best practices..." autocomplete="off">
+                        <button id="sendBtn" class="send-btn">
+                            <i class="fas fa-paper-plane"></i>
+                        </button>
+                    </div>
+                    <div class="input-footer">
+                        <div class="privacy-notice">
+                            <i class="fas fa-lock"></i>
+                            <span>End-to-end encrypted</span>
+                        </div>
+                        <div class="shortcuts">
+                            <span>Press <kbd>Shift</kbd> + <kbd>Enter</kbd> for new line</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </main>
     </div>
-    <div class="header-right">
-      <button class="header-help" title="Help"><span>?</span></button>
-      <img src="https://randomuser.me/api/portraits/women/44.jpg" alt="User Avatar" class="header-avatar" />
-    </div>
-  </header>
-  <div class="background-pattern"></div>
-  <div class="main-flex">
-    <main class="chat-section">
-      <h1 class="page-title">Your Smart Health Companion</h1>
-      <section id="chat-area" class="chat-area"></section>
-      <form id="chat-input-bar" class="chat-input-bar" autocomplete="off">
-        <input id="chat-input" type="text" placeholder="Type your message..." autocomplete="off" />
-        <button type="submit" id="send-btn" class="icon-btn" aria-label="Send">
-          <span class="send-icon">Send</span>
-        </button>
-      </form>
-      <div id="loader" class="loader" style="display:none;">
-        <span></span><span></span><span></span>
-      </div>
-      <div id="onboarding-panel" class="onboarding-panel"></div>
-    </main>
-    <aside id="profile-panel" class="profile-panel">
-      <div class="profile-header">
-        <span class="profile-icon">👤</span>
-        <h3>Your Health Profile</h3>
-      </div>
-      <div id="profile-content" class="profile-content">
-        <div class="profile-placeholder">Start answering to build your profile...</div>
-      </div>
-    </aside>
-  </div>
-  <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
-  <script src="/static/chatbot.js"></script>
-  <script src="/static/profile.js"></script>
+
+    <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+    <script src="/static/js/app.js"></script>
 </body>
-</html> 
+</html>
