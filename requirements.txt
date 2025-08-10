@@ -1,5 +1,6 @@
 fastapi
 uvicorn
+jinja2
 langchain-core
 langgraph>=0.2.27
 langchain[google-genai]
