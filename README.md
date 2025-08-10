@@ -90,8 +90,8 @@ Follow these steps to get the application running locally.
 
 1.  **Clone the repository:**
     ```bash
-    git clone [https://github.com/your-username/securebot.git](https://github.com/your-username/securebot.git)
-    cd securebot
+    git clone [https://github.com/your-username/CybVector.git](https://github.com/your-username/CybVector.git)
+    cd CybVector
     ```
 
 2.  **Install Python dependencies:**
@@ -123,3 +123,19 @@ Follow these steps to get the application running locally.
 ## Project Structure
 
 The project is organized into a clean and maintainable structure.
+
+```/cybvector-project
+├── .env
+├── app.py
+├── services/
+│   ├── __init__.py
+│   ├── hygiene.py
+│   └── ip_tools.py
+├── static/
+│   ├── css/
+│   │   └── style.css
+│   └── js/
+│       └── app.js
+└── templates/
+    └── index.html
+```
