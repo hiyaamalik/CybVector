@@ -4,6 +4,7 @@ import json
 from dotenv import load_dotenv
 from fastapi import FastAPI, Request
 from fastapi.responses import JSONResponse, HTMLResponse
+from fastapi.responses import FileResponse
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
@@ -35,7 +36,10 @@ app.add_middleware(CORSMiddleware, allow_origins=["*"], allow_credentials=True, 
 app.mount("/static", StaticFiles(directory="static"), name="static")
 templates = Jinja2Templates(directory="templates")
 
+
 sessions = {}
+
+
 
 # --- Regex Patterns for Entity Detection ---
 IP_RE = re.compile(r"\b(?:\d{1,3}\.){3}\d{1,3}\b")
@@ -52,9 +56,11 @@ def detect_entities(text: str) -> dict:
     return {"ip": ip.group(0) if ip else None, "url": url.group(0) if url else None, "domain": domain.group(0) if domain else None}
 
 def call_gemini_system(user_text: str, system_prompt: str, evidence: Optional[str] = None) -> str:
+    """Calls the Gemini API with error handling."""
     try:
-        model = genai.GenerativeModel(model_name=MODEL_NAME, system_instruction=system_prompt)
-        full_prompt = user_text
+        model = genai.GenerativeModel(model_name=MODEL_NAME)
+        # System prompt ko user prompt ke sath prepend karo
+        full_prompt = f"{system_prompt}\n\nUser: {user_text}"
         if evidence:
             full_prompt += f"\n\nHere is the evidence from my tools:\n{evidence}"
         response = model.generate_content(full_prompt)

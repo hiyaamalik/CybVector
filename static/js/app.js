@@ -57,6 +57,19 @@ function sendSuggestion(text) {
 }
 
 // Core Functions
+function typeWriter(element, text, speed = 0.5, isMarkdown = false) {
+    let i = 0;
+    function type() {
+        if (i <= text.length) {
+            let current = text.substring(0, i);
+            element.innerHTML = isMarkdown ? marked.parse(current) : current;
+            i++;
+            setTimeout(type, speed);
+        }
+    }
+    type();
+}
+
 function addMessage(content, isUser = false) {
     const welcomeMsg = chatMessages.querySelector('.welcome-message');
     if (welcomeMsg) welcomeMsg.remove();
@@ -66,19 +79,22 @@ function addMessage(content, isUser = false) {
 
     const iconClass = isUser ? 'fa-user-secret' : 'fa-robot';
     const sanitizedContent = isUser ? content.replace(/</g, "&lt;").replace(/>/g, "&gt;") : content;
-    const finalContent = isUser ? sanitizedContent : marked.parse(sanitizedContent);
 
     messageDiv.innerHTML = `
         <div class="message-avatar">
             <i class="fas ${iconClass}"></i>
         </div>
-        <div class="message-content">
-            ${finalContent}
-        </div>
+        <div class="message-content"></div>
     `;
-    
     chatMessages.appendChild(messageDiv);
     chatMessages.scrollTop = chatMessages.scrollHeight;
+
+    const messageContentDiv = messageDiv.querySelector('.message-content');
+    if (isUser) {
+        messageContentDiv.textContent = sanitizedContent;
+    } else {
+    typeWriter(messageContentDiv, sanitizedContent, 0.5, true);
+    }
 }
 
 function showTyping() {
