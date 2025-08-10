@@ -1,4 +1,5 @@
 from typing import List, Dict
+from itertools import zip_longest
 
 HYGIENE_QUESTIONS = [
     "Do you have Multi-Factor Authentication (MFA) enabled on critical accounts? (yes/no)",
@@ -10,23 +11,23 @@ HYGIENE_QUESTIONS = [
 ]
 
 def normalize_yes(ans: str) -> bool:
+    """Checks for affirmative answers."""
     if not ans:
         return False
     return ans.strip().lower() in ("y", "yes", "true", "1", "yeah", "yep")
 
-# --- ADD THIS NEW FUNCTION ---
 def normalize_no(ans: str) -> bool:
+    """Checks for negative answers."""
     if not ans:
         return False
     return ans.strip().lower() in ("n", "no", "false", "0", "nope", "nay")
-# -----------------------------
 
 def score_hygiene(answers: List[str]) -> Dict:
+    """Scores the user's answers to the hygiene quiz."""
     details = []
     yes_count = 0
     
-    # Use zip_longest to handle cases where answers list might be incomplete
-    from itertools import zip_longest
+    # Use zip_longest to safely handle cases where the answers list might be incomplete
     for q, a in zip_longest(HYGIENE_QUESTIONS, answers):
         if q is None: continue
         ok = normalize_yes(a)
